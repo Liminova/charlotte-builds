@@ -1,0 +1,88 @@
+name: nightly
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout private repository
+        uses: actions/checkout@v3
+        with:
+          repository: your-org/charlotte-mobile
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Get latest Git hash
+        id: sha
+        run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+
+      - name: Get current version
+        id: version
+        run: |
+          if [ -f "app.config.js" ]; then
+            VERSION=$(node -p "require('./app.config.js').expo.version")
+          else
+            VERSION=$(jq -r '.expo.version' app.json)
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update version in app.config.js
+        run: |
+          if [ -f "app.config.js" ]; then
+            sed -i 's/version: "\([^"]*\)"/version: "\1-${{ steps.sha.outputs.short_sha }}"/' app.config.js
+          else
+            jq --arg v "${{ steps.version.outputs.version }}-${{ steps.sha.outputs.short_sha }}" '.expo.version = $v' app.json > tmp.json && mv tmp.json app.json
+          fi
+
+      - name: Install EAS CLI
+        run: pnpm i -g eas-cli
+
+      - name: Setup EAS
+        run: eas login --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build Android
+        run: eas build --local --platform android --profile preview --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Create nightly release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}-${{ steps.sha.outputs.short_sha }}
+          release_name: Build ${{ github.run_number }} (${{ steps.sha.outputs.short_sha }})
+          body: |
+            Automated build created by GitHub Actions
+            Build Date: ${{ github.event.repository.updated_at }}
+            Commit: ${{ github.sha }}
+            Version: ${{ steps.version.outputs.version }}-${{ steps.sha.outputs.short_sha }}
+          draft: false
+          prerelease: true
+
+      - name: Upload Android Build
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./android-build.apk
+          asset_name: charlotte-mobile-${{ steps.version.outputs.version }}-${{ steps.sha.outputs.short_sha }}.apk
+          asset_content_type: application/vnd.android.package-archive
