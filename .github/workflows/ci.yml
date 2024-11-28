@@ -59,7 +59,7 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          name: Build ${{ github.run_number }} (${{ steps.sha.outputs.short_sha }})
+          name: Nightly ${{ steps.version.outputs.version }}-${{ steps.sha.outputs.short_sha }}
           repository: Liminova/charlotte-mobile
           token: ${{ secrets.PAT_TOKEN }}
           body: |
