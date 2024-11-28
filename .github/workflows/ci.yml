@@ -47,7 +47,7 @@ jobs:
       - name: Get version from app.config.js
         id: app_version
         run: |
-            VERSION=$(node -p "require(./app.config.js').expo.version")
+            VERSION=$(node -p "require('./app.config.js').expo.version")
             echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Install EAS CLI
