@@ -45,11 +45,11 @@ jobs:
         run: |
           pnpm install --frozen-lockfile --prod
 
-      - name: Get version from app.config.js
-        id: app_version
-        run: |
-            VERSION=$(node -p "require('./app.config.js').expo.version")
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
+      # - name: Get version from app.config.js
+        # id: app_version
+        # run: |
+            # VERSION=$(node -p "require('./app.config.js').expo.version")
+            # echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Install EAS CLI
         run: pnpm i -g eas-cli
@@ -66,7 +66,7 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          name: Nightly ${{ steps.app_version.outputs.version }}-${{ steps.sha.outputs.short_sha }}
+          name: Nightly v1.0.0-${{ steps.sha.outputs.short_sha }}
           tag_name: refs/heads/main
           repository: Liminova/charlotte-mobile
           token: ${{ secrets.PAT_TOKEN }}
@@ -74,7 +74,7 @@ jobs:
             Automated build created by GitHub Actions
             Build Date: ${{ github.event.repository.updated_at }}
             Commit: ${{ github.sha }}
-            Version: ${{ steps.app_version.outputs.version }}-${{ steps.sha.outputs.short_sha }}
+            Version: v1.0.0-${{ steps.sha.outputs.short_sha }}
           draft: false
           prerelease: true
           files: |
