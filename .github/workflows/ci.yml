@@ -57,11 +57,6 @@ jobs:
       - name: Install EAS CLI
         run: pnpm i -g eas-cli
 
-      - name: Setup EAS
-        run: eas login --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-
       - name: Build Android
         run: eas build --local --platform android --profile preview --non-interactive
         env:
