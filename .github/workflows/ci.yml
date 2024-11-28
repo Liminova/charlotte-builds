@@ -67,7 +67,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: Nightly v1.0.0-${{ steps.sha.outputs.short_sha }}
-          tag_name: refs/heads/main
+          tag_name: nightly
           repository: Liminova/charlotte-mobile
           token: ${{ secrets.PAT_TOKEN }}
           body: |
