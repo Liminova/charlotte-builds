@@ -33,6 +33,15 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
+      - name: Configure Git for private packages
+        run: |
+          git config --global url."https://${{ secrets.PAT_TOKEN }}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://".insteadOf "git://"
+
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile --prod
+
       - name: Get current version
         id: version
         run: |
