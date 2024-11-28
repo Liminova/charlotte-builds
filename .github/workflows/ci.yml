@@ -17,9 +17,11 @@ jobs:
           repository: Liminova/charlotte-mobile
           token: ${{ secrets.PAT_TOKEN }}
 
-      - name: Get latest Git hash
+      - name: Get latest Git hash & commit count
         id: sha
-        run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        run: |
+            echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+            echo "commits_count=$(git rev-list $(git describe --tags --abbrev=0)..HEAD --count)" >> $GITHUB_OUTPUT
 
       - uses: pnpm/action-setup@v4
         name: Install pnpm
@@ -42,24 +44,6 @@ jobs:
         run: |
           pnpm install --frozen-lockfile --prod
 
-      - name: Get current version
-        id: version
-        run: |
-          if [ -f "app.config.js" ]; then
-            VERSION=$(node -p "require('./app.config.js').expo.version")
-          else
-            VERSION=$(jq -r '.expo.version' app.json)
-          fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Update version in app.config.js
-        run: |
-          if [ -f "app.config.js" ]; then
-            sed -i 's/version: "\([^"]*\)"/version: "\1-${{ steps.sha.outputs.short_sha }}"/' app.config.js
-          else
-            jq --arg v "${{ steps.version.outputs.version }}-${{ steps.sha.outputs.short_sha }}" '.expo.version = $v' app.json > tmp.json && mv tmp.json app.json
-          fi
-
       - name: Install EAS CLI
         run: pnpm i -g eas-cli
 
@@ -68,13 +52,14 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          COMMIT_HASH: ${{ steps.sha.outputs.short_sha }}
+          COMMITS_COUNT: ${{ steps.sha.outputs.commits_count }}
 
       - name: Create nightly release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
           name: Build ${{ github.run_number }} (${{ steps.sha.outputs.short_sha }})
-          tag_name: v${{ github.run_number }}-${{ steps.sha.outputs.short_sha }}
           repository: Liminova/charlotte-mobile
           token: ${{ secrets.PAT_TOKEN }}
           body: |
