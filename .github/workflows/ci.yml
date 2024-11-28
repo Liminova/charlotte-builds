@@ -13,7 +13,7 @@ jobs:
       - name: Checkout private repository
         uses: actions/checkout@v3
         with:
-          repository: your-org/charlotte-mobile
+          repository: Liminova/charlotte-mobile
           token: ${{ secrets.PAT_TOKEN }}
 
       - name: Get latest Git hash
