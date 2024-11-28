@@ -34,7 +34,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pnpm install --frozen-lockfile
+          pnpm install --frozen-lockfile --prod
 
       - name: Get current version
         id: version
