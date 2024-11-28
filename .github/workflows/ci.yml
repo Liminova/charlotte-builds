@@ -13,7 +13,6 @@ jobs:
       - name: Checkout private repository
         uses: actions/checkout@v3
         with:
-          ref: "feat/nativewind"
           repository: Liminova/charlotte-mobile
           token: ${{ secrets.PAT_TOKEN }}
 
