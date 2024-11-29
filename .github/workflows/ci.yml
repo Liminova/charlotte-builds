@@ -24,24 +24,44 @@ jobs:
             echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
             echo "commits_count=$(git rev-list $(git describe --tags --abbrev=0)..HEAD --count)" >> $GITHUB_OUTPUT
 
+      - name: Check if build is needed
+        id: check_build
+        run: |
+          CURRENT_SHA=$(git rev-parse --short HEAD)
+          NIGHTLY_SHA=$(curl -s -H "Authorization: token ${{ secrets.PAT_TOKEN }}" \
+            "https://api.github.com/repos/Liminova/charlotte-mobile/git/refs/tags/nightly" \
+            | jq -r '.object.sha' | cut -c1-7 || echo '')
+
+          if [ "$CURRENT_SHA" = "$NIGHTLY_SHA" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "No new commits since last nightly build"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "New commits found, proceeding with build"
+          fi
+
       - uses: pnpm/action-setup@v4
+        if: steps.check_build.outputs.skip != 'true'
         name: Install pnpm
         with:
           version: 9
           run_install: false
 
       - name: Setup Node.js
+        if: steps.check_build.outputs.skip != 'true'
         uses: actions/setup-node@v3
         with:
           node-version: '20'
           cache: 'pnpm'
 
       - name: Configure Git for private packages
+        if: steps.check_build.outputs.skip != 'true'
         run: |
           git config --global url."https://${{ secrets.PAT_TOKEN }}@github.com/".insteadOf "git@github.com:"
           git config --global url."https://".insteadOf "git://"
 
       - name: Install dependencies
+        if: steps.check_build.outputs.skip != 'true'
         run: |
           pnpm install --frozen-lockfile --prod
 
@@ -52,9 +72,11 @@ jobs:
             # echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Install EAS CLI
+        if: steps.check_build.outputs.skip != 'true'
         run: pnpm i -g eas-cli
 
       - name: Build Android
+        if: steps.check_build.outputs.skip != 'true'
         run: eas build --local --platform android --profile preview --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -63,6 +85,7 @@ jobs:
           COMMITS_COUNT: ${{ steps.sha.outputs.commits_count }}
 
       - name: Create nightly release
+        if: steps.check_build.outputs.skip != 'true'
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
