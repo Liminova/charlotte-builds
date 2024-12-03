@@ -41,6 +41,12 @@ jobs:
             echo "New commits found, proceeding with build"
           fi
 
+      - name: Update nightly tag
+        if: steps.check_build.outputs.skip != 'true'
+        run: |
+            git tag -f nightly
+            git push --force origin nightly
+
       - uses: pnpm/action-setup@v4
         if: steps.check_build.outputs.skip != 'true'
         name: Install pnpm
@@ -84,6 +90,22 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           COMMIT_HASH: ${{ steps.sha.outputs.short_sha }}
           COMMITS_COUNT: ${{ steps.sha.outputs.commits_count }}
+
+      - name: Clean up old nightly release assets
+        if: steps.check_build.outputs.skip != 'true'
+        run: |
+          # Get all assets from the nightly release
+          assets=$(curl -H "Authorization: token ${{ secrets.PAT_TOKEN }}" \
+            "https://api.github.com/repos/Liminova/charlotte-mobile/releases/tags/nightly" \
+            | jq -r '.assets[] | {id: .id, created_at: .created_at}' \
+            | jq -s 'sort_by(.created_at)[:-3] | .[].id')
+
+          # Delete each asset except the latest 3
+          for asset_id in $assets; do
+            curl -X DELETE \
+              -H "Authorization: token ${{ secrets.PAT_TOKEN }}" \
+              "https://api.github.com/repos/Liminova/charlotte-mobile/releases/assets/$asset_id"
+          done
 
       - name: Create nightly release
         if: steps.check_build.outputs.skip != 'true'
