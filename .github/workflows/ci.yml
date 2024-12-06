@@ -82,6 +82,23 @@ jobs:
         if: steps.check_build.outputs.skip != 'true'
         run: pnpm i -g eas-cli
 
+      - name: Cache EAS Build
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android/.gradle
+            android/app/build
+            node_modules/.cache/expo/android
+            node_modules/.cache/expo/eas-build
+            ~/.npm
+            ~/.pnpm-store
+          key: ${{ runner.os }}-eas-build-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-eas-build-
+            ${{ runner.os }}-
+
       - name: Build Android
         if: steps.check_build.outputs.skip != 'true'
         run: eas build --local --platform android --profile preview --non-interactive --output charlotte-social-v1.0.0-${{ steps.sha.outputs.short_sha }}.apk
