@@ -16,7 +16,7 @@ jobs:
         with:
           fetch-depth: 1
           fetch-tags: true
-          repository: Liminova/charlotte-mobile
+          repository: Liminova/charlotte-social
           token: ${{ secrets.PAT_TOKEN }}
 
       - name: Get latest Git hash & commit count
@@ -30,7 +30,7 @@ jobs:
         run: |
           CURRENT_SHA=$(git rev-parse --short HEAD)
           NIGHTLY_SHA=$(curl -s -H "Authorization: token ${{ secrets.PAT_TOKEN }}" \
-            "https://api.github.com/repos/Liminova/charlotte-mobile/git/refs/tags/nightly" \
+            "https://api.github.com/repos/Liminova/charlotte-social/git/refs/tags/nightly" \
             | jq -r '.object.sha' | cut -c1-7 || echo '')
 
           if [ "$CURRENT_SHA" = "$NIGHTLY_SHA" ]; then
@@ -84,7 +84,7 @@ jobs:
 
       - name: Build Android
         if: steps.check_build.outputs.skip != 'true'
-        run: eas build --local --platform android --profile preview --non-interactive --output charlotte-mobile-v1.0.0-${{ steps.sha.outputs.short_sha }}.apk
+        run: eas build --local --platform android --profile preview --non-interactive --output charlotte-social-v1.0.0-${{ steps.sha.outputs.short_sha }}.apk
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -96,7 +96,7 @@ jobs:
         run: |
           # Get all assets from the nightly release
           assets=$(curl -H "Authorization: token ${{ secrets.PAT_TOKEN }}" \
-            "https://api.github.com/repos/Liminova/charlotte-mobile/releases/tags/nightly" \
+            "https://api.github.com/repos/Liminova/charlotte-social/releases/tags/nightly" \
             | jq -r '.assets[] | {id: .id, created_at: .created_at}' \
             | jq -s 'sort_by(.created_at)[:-3] | .[].id')
 
@@ -104,7 +104,7 @@ jobs:
           for asset_id in $assets; do
             curl -X DELETE \
               -H "Authorization: token ${{ secrets.PAT_TOKEN }}" \
-              "https://api.github.com/repos/Liminova/charlotte-mobile/releases/assets/$asset_id"
+              "https://api.github.com/repos/Liminova/charlotte-social/releases/assets/$asset_id"
           done
 
       - name: Create nightly release
@@ -114,7 +114,7 @@ jobs:
         with:
           name: Nightly v1.0.0-${{ steps.sha.outputs.short_sha }}
           tag_name: nightly
-          repository: Liminova/charlotte-mobile
+          repository: Liminova/charlotte-social
           token: ${{ secrets.PAT_TOKEN }}
           body: |
             Automated build created by GitHub Actions
