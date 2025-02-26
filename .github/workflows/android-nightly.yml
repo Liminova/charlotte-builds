@@ -19,6 +19,9 @@ jobs:
           repository: Liminova/charlotte-social
           token: ${{ secrets.PAT_TOKEN }}
 
+      - name: Where am I?
+        run: pwd
+
       - name: Get latest Git hash & commit count
         id: sha
         run: |
