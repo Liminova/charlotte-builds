@@ -91,8 +91,7 @@ jobs:
         with:
           path: /var/cache/apt/archives
           key: ${{ runner.os }}-apt-${{ hashFiles('.github/workflows/android-nightly.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-apt-
+          restore-keys: ${{ runner.os }}-apt-
 
       - name: Install OS dependencies
         if: steps.check_build.outputs.skip != 'true' && steps.apt-cache.outputs.cache-hit != 'true'
@@ -126,6 +125,7 @@ jobs:
           echo "ANDROID_HOME=/opt/android-sdk" >> $GITHUB_ENV
           echo "PATH=$PATH:/opt/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_ENV
           echo "NDK_HOME=/opt/android-sdk/ndk/28.0.13004108" >> $GITHUB_ENV
+          unset ANDROID_SDK_ROOT
 
       - name: Install Android SDK
         if: steps.check_build.outputs.skip != 'true' && steps.android-sdk-cache.outputs.cache-hit != 'true'
