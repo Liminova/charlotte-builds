@@ -1,9 +1,9 @@
 name: nightly
 
 on:
-  schedule:
-    # 12 AM local time (UTC+7)
-    - cron: '0 17 * * *'
+  # schedule:
+  #   # 12 AM local time (UTC+7)
+  #   - cron: '0 17 * * *'
   workflow_dispatch:
 
 jobs:
