@@ -18,6 +18,7 @@ jobs:
           fetch-tags: true
           repository: Liminova/charlotte-social
           token: ${{ secrets.PAT_TOKEN }}
+          ref: tauri
 
       - name: Get latest Git hash & commit count
         id: sha
@@ -50,7 +51,6 @@ jobs:
       - name: Create signing key
         if: steps.check_build.outputs.skip != 'true'
         run: |
-          ls -la $GITHUB_WORKSPACE
           cd $GITHUB_WORKSPACE/src-tauri/gen/android
           echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" > keystore.properties
           echo "password=${{ secrets.ANDROID_KEY_PASSWORD }}" >> keystore.properties
