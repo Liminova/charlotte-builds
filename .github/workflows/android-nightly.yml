@@ -47,6 +47,17 @@ jobs:
             echo "New commits found, proceeding with build"
           fi
 
+      - name: Create signing key
+        if: steps.check_build.outputs.skip != 'true'
+        run: |
+          ls -la $GITHUB_WORKSPACE
+          cd $GITHUB_WORKSPACE/src-tauri/gen/android
+          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" > keystore.properties
+          echo "password=${{ secrets.ANDROID_KEY_PASSWORD }}" >> keystore.properties
+          base64 -d <<< "${{ secrets.ANDROID_KEY_BASE64 }}" > $RUNNER_TEMP/keystore.jks
+          echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
+          cd $GITHUB_WORKSPACE
+
       - name: Update nightly tag
         if: steps.check_build.outputs.skip != 'true'
         run: |
@@ -127,16 +138,6 @@ jobs:
           mv cmdline-tools latest && mkdir cmdline-tools && mv latest cmdline-tools
           yes | sdkmanager --sdk_root=/opt/android-sdk --licenses
           yes | sdkmanager --sdk_root=/opt/android-sdk "platforms;android-33" "build-tools;33.0.3" "ndk;28.0.13004108"
-
-      - name: Create signing key
-        if: steps.check_build.outputs.skip != 'true'
-        run: |
-          cd $GITHUB_WORKSPACE/src-tauri/gen/android
-          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" > keystore.properties
-          echo "password=${{ secrets.ANDROID_KEY_PASSWORD }}" >> keystore.properties
-          base64 -d <<< "${{ secrets.ANDROID_KEY_BASE64 }}" > $RUNNER_TEMP/keystore.jks
-          echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
-          cd $GITHUB_WORKSPACE
 
       - name: Build Android
         if: steps.check_build.outputs.skip != 'true'
