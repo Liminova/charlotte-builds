@@ -1,0 +1,128 @@
+name: android-nightly
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout private repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          fetch-tags: true
+          repository: Liminova/charlotte-social
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Get latest Git hash & commit count
+        id: sha
+        run: |
+            echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+            echo "commits_count=$(git rev-list $(git describe --tags --abbrev=0)..HEAD --count)" >> $GITHUB_OUTPUT
+
+      - name: Check if build is needed
+        id: check_build
+        run: |
+          CURRENT_SHA=$(git rev-parse --short HEAD)
+          NIGHTLY_SHA=$(curl -s -H "Authorization: token ${{ secrets.PAT_TOKEN }}" \
+            "https://api.github.com/repos/Liminova/charlotte-social/git/refs/tags/nightly" \
+            | jq -r '.object.sha' | cut -c1-7 || echo '')
+
+          if [ "$CURRENT_SHA" = "$NIGHTLY_SHA" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "No new commits since last nightly build"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "New commits found, proceeding with build"
+          fi
+
+      - name: Update nightly tag
+        if: steps.check_build.outputs.skip != 'true'
+        run: |
+            git tag -f nightly
+            git push --force origin nightly
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        if: steps.check_build.outputs.skip != 'true'
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        if: steps.check_build.outputs.skip != 'true'
+        with:
+          target: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Install Node.js
+        if: steps.check_build.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts'
+          cache: 'pnpm'
+
+      - name: Install OS dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Configure Git for private packages
+        if: steps.check_build.outputs.skip != 'true'
+        run: |
+          git config --global url."https://${{ secrets.PAT_TOKEN }}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://".insteadOf "git://"
+
+      - name: Install NPM dependencies
+        if: steps.check_build.outputs.skip != 'true'
+        run: |
+          pnpm install --frozen-lockfile --prod
+
+      - name: Install Android stuffs
+        run: |
+          cd /opt
+          wget https://dl.google.com/android/repository/commandlinetools-linux-7583922_latest.zip
+          unzip commandlinetools-linux-7583922_latest.zip -d /opt/android-sdk
+          rm commandlinetools-linux-7583922_latest.zip -f
+          mv cmdline-tools latest && mkdir cmdline-tools && mv latest cmdline-tools
+          export ANDROID_HOME=/opt/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+          export NDK_HOME=$ANDROID_HOME/ndk/28.0.13004108
+          yes | sdkmanager --sdk_root=/opt/android-sdk --licenses
+          yes | sdkmanager --sdk_root=/opt/android-sdk "platforms;android-33" "build-tools;33.0.3" "ndk;28.0.13004108"
+
+      - name: Create signing key
+        run: |
+          cd src-tauri/gen/android
+          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" > keystore.properties
+          echo "password=${{ secrets.ANDROID_KEY_PASSWORD }}" >> keystore.properties
+          base64 -d <<< "${{ secrets.ANDROID_KEY_BASE64 }}" > $RUNNER_TEMP/keystore.jks
+          echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
+
+      - name: Build Android
+        run: |
+          export ANDROID_HOME=/opt/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+          export NDK_HOME=$ANDROID_HOME/ndk/28.0.13004108
+          pnpm tauri android build --apk
+
+      - name: Create nightly release
+        if: steps.check_build.outputs.skip != 'true'
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Nightly v1.0.0-${{ steps.sha.outputs.short_sha }}
+          tag_name: nightly
+          repository: Liminova/charlotte-social
+          token: ${{ secrets.PAT_TOKEN }}
+          body: |
+            Automated build created by GitHub Actions
+            Build Date: ${{ github.event.repository.updated_at }}
+            Commit: ${{ github.sha }}
+            Version: v1.0.0-${{ steps.sha.outputs.short_sha }}
+          draft: false
+          prerelease: true
+          files: |
+              ./*.apk
