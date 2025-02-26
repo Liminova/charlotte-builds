@@ -73,6 +73,16 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
 
+      - name: Cache APT packages
+        uses: actions/cache@v4
+        id: apt-cache
+        if: steps.check_build.outputs.skip != 'true'
+        with:
+          path: /var/cache/apt/archives
+          key: ${{ runner.os }}-apt-${{ hashFiles('.github/workflows/android-nightly.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
       - name: Install OS dependencies
         if: steps.check_build.outputs.skip != 'true'
         run: |
@@ -90,8 +100,24 @@ jobs:
         if: steps.check_build.outputs.skip != 'true'
         run: pnpm i --no-frozen-lockfile
 
-      - name: Install Android stuffs
+      - name: Cache Android SDK
+        uses: actions/cache@v4
+        id: android-sdk-cache
         if: steps.check_build.outputs.skip != 'true'
+        with:
+          path: /opt/android-sdk
+          key: ${{ runner.os }}-android-sdk-7583922-v1
+          restore-keys: ${{ runner.os }}-android-sdk-7583922-
+
+      - name: Set Android environment variables
+        if: steps.check_build.outputs.skip != 'true'
+        run: |
+          echo "ANDROID_HOME=/opt/android-sdk" >> $GITHUB_ENV
+          echo "PATH=$PATH:/opt/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_ENV
+          echo "NDK_HOME=/opt/android-sdk/ndk/28.0.13004108" >> $GITHUB_ENV
+
+      - name: Install Android SDK
+        if: steps.check_build.outputs.skip != 'true' && steps.android-sdk-cache.outputs.cache-hit != 'true'
         run: |
           cd /opt
           wget https://dl.google.com/android/repository/commandlinetools-linux-7583922_latest.zip
@@ -99,28 +125,22 @@ jobs:
           rm commandlinetools-linux-7583922_latest.zip -f
           cd /opt/android-sdk
           mv cmdline-tools latest && mkdir cmdline-tools && mv latest cmdline-tools
-          export ANDROID_HOME=/opt/android-sdk
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-          export NDK_HOME=$ANDROID_HOME/ndk/28.0.13004108
           yes | sdkmanager --sdk_root=/opt/android-sdk --licenses
           yes | sdkmanager --sdk_root=/opt/android-sdk "platforms;android-33" "build-tools;33.0.3" "ndk;28.0.13004108"
 
       - name: Create signing key
         if: steps.check_build.outputs.skip != 'true'
         run: |
-          cd src-tauri/gen/android
+          cd $GITHUB_WORKSPACE/src-tauri/gen/android
           echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" > keystore.properties
           echo "password=${{ secrets.ANDROID_KEY_PASSWORD }}" >> keystore.properties
           base64 -d <<< "${{ secrets.ANDROID_KEY_BASE64 }}" > $RUNNER_TEMP/keystore.jks
           echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
+          cd $GITHUB_WORKSPACE
 
       - name: Build Android
         if: steps.check_build.outputs.skip != 'true'
-        run: |
-          export ANDROID_HOME=/opt/android-sdk
-          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-          export NDK_HOME=$ANDROID_HOME/ndk/28.0.13004108
-          pnpm tauri android build --apk
+        run: pnpm tauri android build --apk
 
       - name: Create nightly release
         if: steps.check_build.outputs.skip != 'true'
@@ -138,5 +158,4 @@ jobs:
             Version: v1.0.0-${{ steps.sha.outputs.short_sha }}
           draft: false
           prerelease: true
-          files: |
-              ./*.apk
+          files: $GITHUB_WORKSPACE/src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
