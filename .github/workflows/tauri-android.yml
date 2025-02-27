@@ -1,4 +1,4 @@
-name: android-nightly
+name: tauri-android
 
 on:
   schedule:
@@ -159,4 +159,4 @@ jobs:
             Version: v1.0.0-${{ steps.sha.outputs.short_sha }}
           draft: false
           prerelease: true
-          files: ./*.apk
+          files: ./src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk
