@@ -139,9 +139,22 @@ jobs:
           yes | sdkmanager --sdk_root=/opt/android-sdk --licenses
           yes | sdkmanager --sdk_root=/opt/android-sdk "platforms;android-33" "build-tools;33.0.3" "ndk;28.0.13004108"
 
+      - name: Generate `routeTree.gen.ts`
+        if: steps.check_build.outputs.skip != 'true'
+        run: |
+          pnpm i -D @tanstack/router-cli
+          pnpm tsr generate
+
       - name: Build Android
         if: steps.check_build.outputs.skip != 'true'
         run: pnpm tauri android build --apk
+
+      - name: Rename APK file
+        if: steps.check_build.outputs.skip != 'true'
+        run: |
+          cd ./src-tauri/gen/android/app/build/outputs/apk/universal/release
+          mv app-universal-release.apk charlotte-social-v1.0.0-${{ steps.sha.outputs.short_sha }}.apk
+          cd $GITHUB_WORKSPACE
 
       - name: Create nightly release
         if: steps.check_build.outputs.skip != 'true'
@@ -159,4 +172,4 @@ jobs:
             Version: v1.0.0-${{ steps.sha.outputs.short_sha }}
           draft: false
           prerelease: true
-          files: ./src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk
+          files: ./src-tauri/gen/android/app/build/outputs/apk/universal/release/charlotte-social-v1.0.0-${{ steps.sha.outputs.short_sha }}.apk
