@@ -1,4 +1,4 @@
-name: expo-android
+name: android-expo
 
 on:
   # schedule:

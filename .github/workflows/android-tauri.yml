@@ -1,4 +1,4 @@
-name: tauri-android
+name: android-tauri
 
 on:
   schedule:
