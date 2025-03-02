@@ -48,13 +48,6 @@ jobs:
             echo "New commits found, proceeding with build"
           fi
 
-      - name: Rename branch
-        if: steps.check_build.outputs.skip != 'true'
-        run: |
-          git branch -m main-temp
-          git branch -m tauri main
-          git push --set-upstream origin main
-
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         if: steps.check_build.outputs.skip != 'true'
@@ -85,4 +78,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy ./dist --project-name=charlotte-social --commit-dirty=true
+          command: pages deploy ./dist --project-name=charlotte-social --commit-dirty=true --production
