@@ -48,19 +48,19 @@ jobs:
             echo "New commits found, proceeding with build"
           fi
 
-      - name: Install Node.js
-        if: steps.check_build.outputs.skip != 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         if: steps.check_build.outputs.skip != 'true'
         with:
           version: 9
           run_install: false
+
+      - name: Install Node.js
+        if: steps.check_build.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
 
       - name: Generate `routeTree.gen.ts`
         if: steps.check_build.outputs.skip != 'true'
