@@ -2,6 +2,8 @@ name: cleanup-workflow
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 0 */3 * *'
 
 jobs:
   delete-old-runs:
