@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-android:
+  web-cf-pages:
     runs-on: ubuntu-24.04
 
     steps:
