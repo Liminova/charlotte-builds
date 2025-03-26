@@ -1,4 +1,4 @@
-name: web-cf-pages
+name: web-charlotte-social
 
 on:
   schedule:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  web-cf-pages:
+  web-charlotte-social:
     runs-on: ubuntu-24.04
 
     steps:
