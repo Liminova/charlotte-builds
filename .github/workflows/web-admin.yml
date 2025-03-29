@@ -18,7 +18,7 @@ jobs:
           fetch-tags: true
           repository: Liminova/charlotte-admin
           token: ${{ secrets.PAT_TOKEN }}
-          ref: student-route-and-avatar
+          ref: student-messages-routes
 
       - name: Get latest Git hash & commit count
         id: sha
